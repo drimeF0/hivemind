@@ -12,7 +12,7 @@ import torch
 
 from hivemind.dht import DHT
 from hivemind.moe.expert_uid import UID_DELIMITER
-from hivemind.moe.server.checkpoints import CheckpointSaver, is_directory, load_experts
+from hivemind.moe.server.checkpoints import CheckpointSaver, is_directory, load_experts_from_pt
 from hivemind.moe.server.connection_handler import ConnectionHandler
 from hivemind.moe.server.dht_handler import DHTHandlerThread, get_experts
 from hivemind.moe.server.layers import (
@@ -214,7 +214,7 @@ class Server(threading.Thread):
             )
 
         if checkpoint_dir is not None:
-            load_experts(experts, checkpoint_dir)
+            load_experts_from_pt(experts, checkpoint_dir)
 
         return cls(
             dht,

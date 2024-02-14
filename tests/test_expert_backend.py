@@ -6,7 +6,7 @@ import torch
 from torch.nn import Linear
 
 from hivemind import BatchTensorDescriptor, ModuleBackend
-from hivemind.moe.server.checkpoints import load_experts, store_experts
+from hivemind.moe.server.checkpoints import load_experts_from_pt, store_experts_to_pt
 from hivemind.moe.server.layers.lr_schedule import get_linear_schedule_with_warmup
 
 EXPERT_WEIGHT_UPDATES = 3
@@ -48,7 +48,7 @@ def test_save_load_checkpoints(example_experts):
 
         for i in range(1, EXPERT_WEIGHT_UPDATES + 1):
             expert.weight.data[0] = i
-            store_experts(example_experts, tmp_path)
+            store_experts_to_pt(example_experts, tmp_path)
 
         checkpoints_dir = tmp_path / EXPERT_NAME
 
@@ -58,7 +58,7 @@ def test_save_load_checkpoints(example_experts):
 
         expert.weight.data[0] = 0
 
-        load_experts(example_experts, tmp_path)
+        load_experts_from_pt(example_experts, tmp_path)
         assert expert.weight.data[0] == EXPERT_WEIGHT_UPDATES
 
 
@@ -75,12 +75,12 @@ def test_restore_update_count(example_experts):
         for _ in range(BACKWARD_PASSES_BEFORE_SAVE):
             expert_backend.backward(batch, loss_grad)
 
-        store_experts(example_experts, tmp_path)
+        store_experts_to_pt(example_experts, tmp_path)
 
         for _ in range(BACKWARD_PASSES_AFTER_SAVE):
             expert_backend.backward(batch, loss_grad)
 
-        load_experts(example_experts, tmp_path)
+        load_experts_from_pt(example_experts, tmp_path)
         assert expert_backend.scheduler._step_count == BACKWARD_PASSES_BEFORE_SAVE + 1
 
 
@@ -102,12 +102,12 @@ def test_lr_schedule(example_experts):
             expert_backend.backward(batch, loss_grad)
 
         assert optimizer.param_groups[0]["lr"] == PEAK_LR
-        store_experts(example_experts, tmp_path)
+        store_experts_to_pt(example_experts, tmp_path)
 
         for i in range(BACKWARD_PASSES_AFTER_SAVE):
             assert optimizer.param_groups[0]["lr"] == PEAK_LR * (1 - (i / BACKWARD_PASSES_AFTER_SAVE))
             expert_backend.backward(batch, loss_grad)
 
         assert optimizer.param_groups[0]["lr"] == 0.0
-        load_experts(example_experts, tmp_path)
+        load_experts_from_pt(example_experts, tmp_path)
         assert optimizer.param_groups[0]["lr"] == PEAK_LR
