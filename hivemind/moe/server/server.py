@@ -387,7 +387,7 @@ def _generate_uids(
 
         # 2. look into DHT (if given) and remove duplicates
     if dht is not None:
-        found = get_experts(dht, new_uids)
+        found = get_experts(dht, [ui.uid for ui in new_uids])
         for f in found:
             if f is not None:
                 raise f"{found} already exists"
