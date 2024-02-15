@@ -158,23 +158,15 @@ class Server(threading.Thread):
         visible_maddrs_str = [str(a) for a in dht.get_visible_maddrs()]
         logger.info(f"Running DHT node on {visible_maddrs_str}, initial peers = {initial_peers}")
 
-        assert (expert_pattern is None and num_experts is None and expert_uids is not None) or (
-            num_experts is not None and expert_uids is None
-        ), "Please provide either expert_uids *or* num_experts (possibly with expert_pattern), but not both"
+        assert expert_pattern is None, "Please provide expert_pattern"
 
-        if checkpoint_dir is not None:
-            assert is_directory(checkpoint_dir)
-            expert_uids = [
-                    child.name for child in checkpoint_dir.iterdir() if (child / "checkpoint_last.safetensors").exists()
-                ]
-            total_experts_in_checkpoint = len(expert_uids)
-            if total_experts_in_checkpoint < num_experts*num_layers:
-                raise BaseException(f"checkpoint_dir {checkpoint_dir} is broken?")
-        else:
-            expert_uids = []
-            uids_to_generate = num_experts * num_layers
-            logger.info(f"Generating {uids_to_generate} experts from pattern {expert_pattern}")
-            expert_uids.extend(_generate_uids(num_experts, num_layers, expert_pattern, dht))
+        #if checkpoint_dir is not None:
+            #expert_uids = 
+        #else:
+        expert_uids = []
+        uids_to_generate = num_experts * num_layers
+        logger.info(f"Generating {uids_to_generate} experts from pattern {expert_pattern}")
+        expert_uids.extend(_generate_uids(num_experts, num_layers, expert_pattern, dht))
 
         num_experts = len(expert_uids)
         num_handlers = num_handlers if num_handlers is not None else num_experts * 8
@@ -229,6 +221,17 @@ class Server(threading.Thread):
             expiration=expiration,
             start=start,
         )
+
+
+    # def load_from_checkpoint_dir(self,checkpoint_dir):
+    #         assert is_directory(checkpoint_dir)
+    #         expert_uids = [
+    #                 child.name for child in checkpoint_dir.iterdir() if (child / "checkpoint_last.safetensors").exists()
+    #             ]
+    #         total_experts_in_checkpoint = len(expert_uids)
+    #         if total_experts_in_checkpoint < num_experts*num_layers:
+    #             raise BaseException(f"checkpoint_dir {checkpoint_dir} is broken?")
+
 
     def run(self):
         """
