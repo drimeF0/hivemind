@@ -13,7 +13,7 @@ import torch
 from hivemind.dht import DHT
 from hivemind.moe.expert_uid import UID_DELIMITER
 
-from hivemind.moe.server.checkpoints import CheckpointSaver, is_directory, load_experts
+from hivemind.moe.server.checkpoints import CheckpointSaver, is_directory, load_experts, load_weights_from_hf
 
 from hivemind.moe.server.bnb_quantization import quantization, init_empty_weights
 
@@ -207,8 +207,10 @@ class Server(threading.Thread):
                 max_batch_size=max_batch_size,
             )
 
-        if checkpoint_dir is not None:
+        if checkpoint_dir and not hugginface_rep:
             load_experts(experts, checkpoint_dir, load_in_4bit=load_in_4bit)
+        elif not checkpoint_dir and hugginface_rep:
+            load_weights_from_hf(experts, hugginface_rep)
 
 
         return cls(
