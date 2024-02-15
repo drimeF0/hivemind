@@ -34,7 +34,7 @@ def load_huggingface_rep(repo_id : str) -> Path:
 def load_safetensor(path : str):
     return load_file(path)
 
-def safe_safetensor(tensors: Dict, path: str):
+def save_safetensor(tensors: Dict, path: str):
     save_file(tensors, path)
     
 
