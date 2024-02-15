@@ -23,9 +23,6 @@ def main():
     parser.add_argument('--num_layers', type=int, default=None, required=True, help="The number of layers to serve")
     parser.add_argument('--expert_pattern', type=str, default=None, required=True,
                         help='pattern like "mixtral.\{layer_id\}.\{expert_id\}"')
-    parser.add_argument('--expert_uids', type=str, nargs="*", default=None, required=False,
-                        help="specify the exact list of expert uids to create. Use either this or num_experts"
-                             " and expert_pattern, not both")
     parser.add_argument('--expert_cls', type=str, default='ffn', required=False,
                         help="expert type from test_utils.layers, e.g. 'ffn', 'transformer', 'det_dropout' or 'nop'")
     parser.add_argument('--hidden_dim', type=int, default=1024, required=False, help='main dimension for expert_cls')
@@ -46,6 +43,19 @@ def main():
         help="Look for libp2p relays to become reachable if we are behind NAT/firewall",
     )
 
+    parser.add_argument(
+        "--load_in_4bit",
+        action="store_true",
+        help="bnb 4bit",
+    )
+
+    parser.add_argument(
+        "--hugginface_rep",
+        type=str,
+        default=None,
+        required=False,
+    )
+
     parser.add_argument('--num_handlers', type=int, default=None, required=False,
                         help='server will use this many processes to handle incoming requests')
     parser.add_argument('--min_batch_size', type=int, default=1,
@@ -56,8 +66,6 @@ def main():
                         help='all experts will use this device in torch notation; default: cuda if available else cpu')
 
     parser.add_argument('--optimizer', type=str, default='adam', required=False, help='adam, sgd, adafacor (WIP) or none')
-    parser.add_argument('--scheduler', type=str, choices=schedule_name_to_scheduler.keys(), default='none',
-                        help='LR scheduler type to use')
     parser.add_argument('--num_warmup_steps', type=int, required=False,
                         help='The number of warmup steps for LR schedule')
     parser.add_argument('--update_period', type=float, required=False, default=30,
