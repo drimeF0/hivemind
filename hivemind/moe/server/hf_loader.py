@@ -5,7 +5,7 @@ from huggingface_hub import snapshot_download,hf_hub_download
 
 import json
 from pathlib import Path
-from typing import Dict
+from typing import Dict, List
 import functools
 
 from hivemind.moe.server.module_backend import ModuleBackend
@@ -53,7 +53,7 @@ def get_state_dict_by_key(key : str, weigths_map : Dict, repo_id : str):
 def get_expert_state_dict(state_dict : Dict, key : str):
     return state_dict[key]
 
-def load_weights_from_hf(expert : ModuleBackend, repo_id: str):
+def _load_weights_from_hf(expert : ModuleBackend, repo_id: str):
     repo_path = load_huggingface_rep(repo_id=repo_id)
     weights_map = load_weights_map_from_json(repo_path / "model.safetensors.index.json")
     rule = mixtral_rules(expert.layer_id, expert.expert_id)
@@ -65,3 +65,8 @@ def load_weights_from_hf(expert : ModuleBackend, repo_id: str):
         module_state_dict[expert_key] = value
     
     return {"module":module_state_dict}
+
+def load_weights_from_hf(experts: List[ModuleBackend], repo_id: str):
+    for expert in experts:
+        state_dict = _load_weights_from_hf(expert, repo_id)
+        expert.load_state_dict(state_dict)
