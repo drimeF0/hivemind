@@ -158,7 +158,7 @@ class Server(threading.Thread):
         visible_maddrs_str = [str(a) for a in dht.get_visible_maddrs()]
         logger.info(f"Running DHT node on {visible_maddrs_str}, initial peers = {initial_peers}")
 
-        assert expert_pattern is None, "Please provide expert_pattern"
+        assert not (expert_pattern is None), "Please provide expert_pattern"
 
         #if checkpoint_dir is not None:
             #expert_uids = 
