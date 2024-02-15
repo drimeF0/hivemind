@@ -22,9 +22,9 @@ from hivemind.moe.server.module_backend import ModuleBackend
 
 def mixtral_rules(layer_id : int,expert_id : int):
     return {
-        f"model.layers.{layer_id}.block_sparse_moe.experts.{expert_id}.w1.weight":"w1.weight",
-    f"model.layers.{layer_id}.block_sparse_moe.experts.{expert_id}.w2.weight":"w2.weight",
-f"model.layers.{layer_id}.block_sparse_moe.experts.{expert_id}.w3.weight":"w3.weight"
+        f"model.layers.{layer_id}.block_sparse_moe.experts.{expert_id}.w1.weight":"block.w1.weight",
+    f"model.layers.{layer_id}.block_sparse_moe.experts.{expert_id}.w2.weight":"block.w2.weight",
+f"model.layers.{layer_id}.block_sparse_moe.experts.{expert_id}.w3.weight":"block.w3.weight"
 }
 
 
