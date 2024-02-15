@@ -10,7 +10,7 @@ import torch
 
 from hivemind.moe.server.module_backend import ModuleBackend
 from hivemind.utils.logging import get_logger
-from hf_loader import load_weights_from_hf, load_safetensor, save_safetensor
+from hivemind.moe.server.hf_loader import load_weights_from_hf, load_safetensor, save_safetensor
 
 logger = get_logger(__name__)
 
