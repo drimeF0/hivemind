@@ -12,7 +12,7 @@ import torch
 
 from hivemind.dht import DHT
 from hivemind.moe.expert_uid import UID_DELIMITER
-from hivemind.moe.server.checkpoints import CheckpointSaver, is_directory, load_experts_from_pt
+from hivemind.moe.server.checkpoints import CheckpointSaver, load_experts
 from hivemind.moe.server.connection_handler import ConnectionHandler
 from hivemind.moe.server.dht_handler import DHTHandlerThread, get_experts
 from hivemind.moe.server.layers import (
@@ -60,17 +60,12 @@ class Server(threading.Thread):
         update_period: float = 30,
         expiration: Optional[float] = None,
         start=False,
-        checkpoint_dir=None,
         **kwargs,
     ):
         super().__init__()
         self.dht, self.module_backends, self.update_period = dht, module_backends, update_period
 
         self.conn_handlers = [ConnectionHandler(dht, self.module_backends) for _ in range(num_connection_handlers)]
-        if checkpoint_dir is not None:
-            self.checkpoint_saver = CheckpointSaver(module_backends, checkpoint_dir, update_period)
-        else:
-            self.checkpoint_saver = None
         self.runtime = Runtime(self.module_backends, **kwargs)
 
         if self.module_backends:
@@ -89,22 +84,23 @@ class Server(threading.Thread):
     def create(
         cls,
         num_experts: int = None,
-        expert_uids: str = None,
+        num_layers: int = 1,
+        hugginface_rep: str = None,
+        loading_rule: str = "mixtral",
         expert_pattern: str = None,
         expert_cls="ffn",
         hidden_dim=1024,
-        optim_cls=torch.optim.Adam,
+        optim_cls=None,
         scheduler: str = "none",
         num_warmup_steps=None,
         num_training_steps=None,
         clip_grad_norm=None,
         num_handlers=None,
         min_batch_size=1,
-        max_batch_size=4096,
+        max_batch_size=1,
         device=None,
         initial_peers=(),
-        checkpoint_dir: Optional[Path] = None,
-        compression=CompressionType.NONE,
+        compression=CompressionType.BLOCKWISE_8BIT,
         stats_report_interval: Optional[int] = None,
         custom_module_path=None,
         update_period: float = 30,
@@ -116,10 +112,11 @@ class Server(threading.Thread):
         """
         Instantiate a server with several identical modules. See argparse comments below for details
 
-        :param num_experts: run this many identical experts
-        :param expert_pattern: a string pattern or a list of expert uids,  example: myprefix.[0:32].[0:256]\
-           means "sample random experts between myprefix.0.0 and myprefix.255.255;
-        :param expert_uids: spawn experts with these exact uids, overrides num_experts and expert_pattern
+        :param num_experts: num experts per layer
+        :param num_layers: total layers
+        :param hugginface_rep: huggingface rep to load weights
+        :param loading_rule: rule for loading weights from huggingface rep
+        :param expert_pattern: a string pattern of expert uids,  example: myprefix.\{layer_id\}.\{expert_id\}
         :param expert_cls: expert type from hivemind.moe.server.layers, e.g. 'ffn' or 'transformer';
         :param hidden_dim: main dimension for expert_cls
         :param num_handlers: server will use this many parallel processes to handle incoming requests
@@ -132,10 +129,8 @@ class Server(threading.Thread):
         :param num_warmup_steps: the number of warmup steps for LR schedule
         :param num_training_steps: the total number of steps for LR schedule
         :param clip_grad_norm: maximum gradient norm used for clipping
-
         :param initial_peers: multiaddrs of one or more active DHT peers (if you want to join an existing DHT)
 
-        :param checkpoint_dir: directory to save and load expert checkpoints
 
         :param compression: if specified, use this compression to pack all inputs, outputs and gradients by all experts
             hosted on this server. For a more fine-grained compression, start server in python and specify compression
@@ -157,27 +152,11 @@ class Server(threading.Thread):
             num_experts is not None and expert_uids is None
         ), "Please provide either expert_uids *or* num_experts (possibly with expert_pattern), but not both"
 
-        if expert_uids is None:
-            if checkpoint_dir is not None:
-                assert is_directory(checkpoint_dir)
-                expert_uids = [
-                    child.name for child in checkpoint_dir.iterdir() if (child / "checkpoint_last.pt").exists()
-                ]
-                total_experts_in_checkpoint = len(expert_uids)
-                logger.info(f"Located {total_experts_in_checkpoint} checkpoints for experts {expert_uids}")
+        expert_uids = []
 
-                if total_experts_in_checkpoint > num_experts:
-                    raise ValueError(
-                        f"Found {total_experts_in_checkpoint} checkpoints, but num_experts is set to {num_experts}, "
-                        f"which is smaller. Either increase num_experts or remove unneeded checkpoints."
-                    )
-            else:
-                expert_uids = []
-
-            uids_to_generate = num_experts - len(expert_uids)
-            if uids_to_generate > 0:
-                logger.info(f"Generating {uids_to_generate} expert uids from pattern {expert_pattern}")
-                expert_uids.extend(_generate_uids(uids_to_generate, expert_pattern, dht))
+        uids_to_generate = num_experts * num_layers
+        logger.info(f"Generating {uids_to_generate} expert uids from pattern {expert_pattern}")
+        expert_uids.extend(_generate_uids(num_experts, num_layers, expert_pattern, dht))
 
         num_experts = len(expert_uids)
         num_handlers = num_handlers if num_handlers is not None else num_experts * 8
@@ -213,15 +192,12 @@ class Server(threading.Thread):
                 max_batch_size=max_batch_size,
             )
 
-        if checkpoint_dir is not None:
-            load_experts_from_pt(experts, checkpoint_dir)
 
         return cls(
             dht,
             experts,
             num_connection_handlers=num_handlers,
             device=device,
-            checkpoint_dir=checkpoint_dir,
             stats_report_interval=stats_report_interval,
             update_period=update_period,
             expiration=expiration,
@@ -293,9 +269,9 @@ class Server(threading.Thread):
             self.dht_handler_thread.stop.set()
             self.dht_handler_thread.join()
 
-        if self.checkpoint_saver is not None:
-            self.checkpoint_saver.stop.set()
-            self.checkpoint_saver.join()
+        # if self.checkpoint_saver is not None:
+        #     self.checkpoint_saver.stop.set()
+        #     self.checkpoint_saver.join()
 
         self.dht.shutdown()
 
@@ -349,7 +325,7 @@ def _server_runner(pipe, *args, **kwargs):
 
 
 def _generate_uids(
-    num_experts: int, expert_pattern: Optional[str], dht: Optional[DHT] = None, attempts_per_expert=10
+    num_experts: int, num_layers: int, expert_pattern: str, dht: Optional[DHT] = None, attempts_per_expert=10
 ) -> List[str]:
     """
     Sample experts from a given pattern, remove duplicates.
@@ -361,52 +337,22 @@ def _generate_uids(
     :note: this method is not strictly process-safe. If several servers run it concurrently, they have
      a small chance of sampling duplicate expert uids.
     """
-    remaining_attempts = attempts_per_expert * num_experts
-    found_uids, attempted_uids = list(), set()
 
-    def _generate_uid():
-        if expert_pattern is None:
-            return f"expert{UID_DELIMITER}{attempts_per_expert * num_experts - remaining_attempts}"
+    def _generate_uid(layer_id, expert_id):
+        return expert_pattern.format(expert_id=expert_id,layer_id=layer_id)
+    
 
-        uid = []
-        for block in expert_pattern.split(UID_DELIMITER):
-            try:
-                if "[" not in block and "]" not in block:
-                    uid.append(block)
-                elif block.startswith("[") and block.endswith("]") and ":" in block:
-                    slice_start, slice_end = map(int, block[1:-1].split(":"))
-                    uid.append(str(random.randint(slice_start, slice_end - 1)))
-                else:
-                    raise ValueError("Block must be either fixed or a range [from:to]")
-            except KeyboardInterrupt:
-                raise
-            except Exception as e:
-                raise ValueError(f"Expert pattern {expert_pattern} has invalid block {block}, {e}")
-        return UID_DELIMITER.join(uid)
-
-    while remaining_attempts > 0 and len(found_uids) < num_experts:
-
-        # 1. sample new expert uids at random
-        new_uids = []
-        while len(new_uids) + len(found_uids) < num_experts and remaining_attempts > 0:
-            new_uid = _generate_uid()
-            remaining_attempts -= 1
-            if new_uid not in attempted_uids:
-                attempted_uids.add(new_uid)
-                new_uids.append(new_uid)
+    # 1. sample uids
+    new_uids = []
+    for layer_id in range(num_layers):
+        for expert_id in range(num_experts):
+            new_uid = _generate_uid(layer_id,expert_id)
+            new_uids.append(new_uid)
 
         # 2. look into DHT (if given) and remove duplicates
-        if dht is not None:
-            existing_expert_uids = {
-                found_expert.uid for found_expert in get_experts(dht, new_uids) if found_expert is not None
-            }
-            new_uids = [new_uid for new_uid in new_uids if new_uid not in existing_expert_uids]
-
-        found_uids += new_uids
-
-    if len(found_uids) != num_experts:
-        logger.warning(
-            f"Found only {len(found_uids)} out of {num_experts} free expert uids after "
-            f"{attempts_per_expert * num_experts} attempts"
-        )
-    return found_uids
+    if dht is not None:
+        found = get_experts(dht, new_uids)
+        for f in found:
+            if f is not None:
+                raise f"{found} already exists"
+    return new_uids

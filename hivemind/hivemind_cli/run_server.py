@@ -19,11 +19,10 @@ def main():
     parser = configargparse.ArgParser(default_config_files=["config.yml"])
     parser.add('-c', '--config', required=False, is_config_file=True, help='config file path')
 
-    parser.add_argument('--num_experts', type=int, default=None, required=False, help="The number of experts to serve")
-    parser.add_argument('--expert_pattern', type=str, default=None, required=False,
-                        help='all expert uids will follow this pattern, e.g. "myexpert.[0:256].[0:1024]" will'
-                             ' sample random expert uids between myexpert.0.0 and myexpert.255.1023 . Use either'
-                             ' num_experts and this or expert_uids')
+    parser.add_argument('--num_experts', type=int, default=None, required=True, help="The number of experts to serve")
+    parser.add_argument('--num_layers', type=int, default=None, required=True, help="The number of layers to serve")
+    parser.add_argument('--expert_pattern', type=str, default=None, required=True,
+                        help='pattern like "mixtral.\{layer_id\}.\{expert_id\}"')
     parser.add_argument('--expert_uids', type=str, nargs="*", default=None, required=False,
                         help="specify the exact list of expert uids to create. Use either this or num_experts"
                              " and expert_pattern, not both")
@@ -51,12 +50,12 @@ def main():
                         help='server will use this many processes to handle incoming requests')
     parser.add_argument('--min_batch_size', type=int, default=1,
                         help='Minimum required batch size for all expert operations')
-    parser.add_argument('--max_batch_size', type=int, default=16384,
+    parser.add_argument('--max_batch_size', type=int, default=1,
                         help='The total number of examples in the same batch will not exceed this value')
     parser.add_argument('--device', type=str, default=None, required=False,
                         help='all experts will use this device in torch notation; default: cuda if available else cpu')
 
-    parser.add_argument('--optimizer', type=str, default='adam', required=False, help='adam, sgd or none')
+    parser.add_argument('--optimizer', type=str, default='adam', required=False, help='adam, sgd, adafacor (WIP) or none')
     parser.add_argument('--scheduler', type=str, choices=schedule_name_to_scheduler.keys(), default='none',
                         help='LR scheduler type to use')
     parser.add_argument('--num_warmup_steps', type=int, required=False,
@@ -93,8 +92,10 @@ def main():
         optim_cls = partial(torch.optim.SGD, lr=0.01)
     elif optimizer == "none":
         optim_cls = None
+    elif optimizer == "adafactor":
+        optim_cls = None
     else:
-        raise ValueError("optim_cls must be adam, sgd or none")
+        raise ValueError("optim_cls must be adam, adafactor, sgd or none")
 
     if args.pop("increase_file_limit"):
         increase_file_limit()

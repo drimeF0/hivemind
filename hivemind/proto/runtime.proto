@@ -38,3 +38,11 @@ message Tensor {
   int32 chunks = 6;
 }
 
+/* message ExpertStateDict {
+*  string uid = 1;
+*  repeated Tensor tensors = 2;
+*
+*}
+*/
+
+

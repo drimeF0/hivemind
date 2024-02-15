@@ -7,7 +7,6 @@ from tempfile import TemporaryDirectory
 from typing import Dict
 
 import torch
-import safetensors
 
 from hivemind.moe.server.module_backend import ModuleBackend
 from hivemind.utils.logging import get_logger
@@ -90,7 +89,9 @@ def _map_hf_keys_to_expert_keys(from_hf_to_expert: Dict[str, str], state_dict_hf
 
 
 def load_experts_from_safetensors(experts: Dict[str, ModuleBackend], checkpoint_path: Path, strict: bool = False):
-    pass
+    assert is_file(checkpoint_path)
+    for expert_name, expert in experts.items():
+        pass
 
 def store_experts_to_safetensors(experts: Dict[str, ModuleBackend], checkpoint_path: Path, strict: bool = False):
     pass
