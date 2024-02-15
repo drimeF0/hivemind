@@ -41,7 +41,6 @@ def save_safetensor(tensors: Dict, path: str):
 def load_weights_map_from_json(path: Path) -> Dict:
     return json.load(open(path))["weight_map"]
 
-@functools.lru_cache(maxsize=2)
 def get_state_dict_by_key(key : str, weigths_map : Dict, repo_id : str):
     filename = weigths_map[key]
 
