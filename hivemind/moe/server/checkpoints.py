@@ -10,6 +10,7 @@ import torch
 
 from hivemind.moe.server.module_backend import ModuleBackend
 from hivemind.utils.logging import get_logger
+from hf_loader import load_weights_from_hf, load_safetensor, save_safetensor
 
 logger = get_logger(__name__)
 
@@ -49,14 +50,14 @@ class CheckpointSaver(threading.Thread):
         self.stop = threading.Event()
 
         # create expert directories to ensure that the directory is writable and checkpoints can be loaded
-        store_experts_to_pt(self.module_backends, self.checkpoint_dir)
+        store_experts(self.module_backends, self.checkpoint_dir)
 
     def run(self) -> None:
         while not self.stop.wait(self.update_period):
-            store_experts_to_pt(self.module_backends, self.checkpoint_dir)
+            store_experts(self.module_backends, self.checkpoint_dir)
 
 
-def store_experts_to_pt(experts: Dict[str, ModuleBackend], checkpoint_dir: Path):
+def store_experts(experts: Dict[str, ModuleBackend], checkpoint_dir: Path):
     logger.debug(f"Storing experts at {checkpoint_dir.absolute()}")
     assert is_directory(checkpoint_dir)
     timestamp = datetime.now().isoformat(sep="_")
@@ -64,38 +65,26 @@ def store_experts_to_pt(experts: Dict[str, ModuleBackend], checkpoint_dir: Path)
         for expert_name, expert_backend in experts.items():
             expert_dir = Path(tmpdirname) / expert_name
             expert_dir.mkdir()
-            checkpoint_name = expert_dir / f"checkpoint_{timestamp}.pt"
-            torch.save(expert_backend.state_dict(), checkpoint_name)
-            os.symlink(checkpoint_name, expert_dir / "checkpoint_last.pt")
+            checkpoint_name = expert_dir / f"checkpoint_{timestamp}.safetensors"
+            save_safetensor(expert_backend.state_dict(), checkpoint_name)
+            os.symlink(checkpoint_name, expert_dir / "checkpoint_last.safetensors")
         copy_tree(tmpdirname, str(checkpoint_dir))
 
 
-def load_experts_from_pt(experts: Dict[str, ModuleBackend], checkpoint_dir: Path):
+def load_experts(experts: Dict[str, ModuleBackend], checkpoint_dir: Path, load_in_4bit: bool):
     assert is_directory(checkpoint_dir)
     for expert_name, expert in experts.items():
         checkpoints_folder = checkpoint_dir / expert_name
-        latest_checkpoint = checkpoints_folder / "checkpoint_last.pt"
+        latest_checkpoint = checkpoints_folder / "checkpoint_last.safetensors"
         if latest_checkpoint.exists():
-            expert.load_state_dict(torch.load(latest_checkpoint))
+            expert.load_state_dict(load_safetensor(latest_checkpoint))
         else:
             logger.warning(f"Failed to load checkpoint for expert {expert_name}")
 
-def _map_hf_keys_to_expert_keys(from_hf_to_expert: Dict[str, str], state_dict_hf):
-    result_state_dict = {}
-    for key in state_dict_hf.keys():
-        if key in from_hf_to_expert.keys():
-            result_state_dict[from_hf_to_expert[key]] = state_dict_hf[key]
-    return result_state_dict
 
 
-def load_experts_from_safetensors(experts: Dict[str, ModuleBackend], checkpoint_path: Path, strict: bool = False):
-    assert is_file(checkpoint_path)
-    for expert_name, expert in experts.items():
-        pass
 
-def store_experts_to_safetensors(experts: Dict[str, ModuleBackend], checkpoint_path: Path, strict: bool = False):
-    pass
-
-
-def load_experts_from_hf(experts: Dict[str, ModuleBackend], huggingface_checkpoint_dir: Path, hf_state_dict_keys_to_expert_keys: Dict[str, str]):
-    pass
+def load_experts_from_hf(experts: Dict[str, ModuleBackend], repo_id: str):
+    for _,expert in experts.items():
+        state_dict = load_weights_from_hf(expert,repo_id)
+        expert.load_state_dict(state_dict)

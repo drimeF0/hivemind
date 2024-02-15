@@ -46,7 +46,11 @@ class ModuleBackend:
         self,
         name: str,
         module: nn.Module,
+        expert_id: int,
+        layer_id: int,
         *,
+        device: str = "cpu",
+        load_in_4bit: bool = False,
         optimizer: Optional[torch.optim.Optimizer] = None,
         scheduler: Optional[LRSchedulerBase] = None,
         args_schema: Tuple[BatchTensorDescriptor, ...] = None,
@@ -56,6 +60,12 @@ class ModuleBackend:
     ):
         super().__init__()
         self.name, self.module, self.optimizer, self.scheduler = name, module, optimizer, scheduler
+
+        self.expert_id = expert_id
+        self.layer_id = layer_id
+        
+        self.load_in_4bit = load_in_4bit
+        self.device = device
 
         self.args_schema = args_schema = tuple(args_schema or ())
         self.kwargs_schema = kwargs_schema = dict(kwargs_schema or {})
@@ -175,6 +185,9 @@ class ModuleBackend:
 
     def load_state_dict(self, state_dict: Dict):
         self.module.load_state_dict(state_dict["module"])
+
+        self.module.to(self.device)
+        
         if self.optimizer is not None:
             if "optimizer" in state_dict:
                 self.optimizer.load_state_dict(state_dict["optimizer"])

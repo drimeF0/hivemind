@@ -69,9 +69,6 @@ class Runtime(threading.Thread):
         for pool in self.pools:
             if not pool.is_alive():
                 pool.start()
-        if self.device is not None:
-            for backend in self.module_backends.values():
-                backend.module.to(self.device)
 
         with mp.pool.ThreadPool(self.sender_threads) as output_sender_pool:
             try:
