@@ -76,7 +76,7 @@ def store_experts(experts: Dict[str, ModuleBackend], checkpoint_dir: Path):
         copy_tree(tmpdirname, str(checkpoint_dir))
 
 
-def _load_expert(expert: nn,Module, expert_name: str, checkpoint_dir: Path):
+def load_expert(expert: nn,Module, expert_name: str, checkpoint_dir: Path):
     checkpoints_folder = checkpoint_dir / expert_name
     latest_checkpoint = checkpoints_folder / "module.safetensors"
     if latest_checkpoint.exists():
