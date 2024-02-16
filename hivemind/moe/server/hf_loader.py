@@ -64,8 +64,3 @@ def _load_weights_from_hf(expert : ModuleBackend, repo_id: str):
         module_state_dict[expert_key] = value
     
     return {"module":module_state_dict}
-
-def load_weights_from_hf(experts: List[ModuleBackend], repo_id: str):
-    for _,expert in experts.items():
-        state_dict = _load_weights_from_hf(expert, repo_id)
-        expert.load_state_dict(state_dict)

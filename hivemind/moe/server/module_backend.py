@@ -46,11 +46,8 @@ class ModuleBackend:
         self,
         name: str,
         module: nn.Module,
-        expert_id: int,
-        layer_id: int,
         *,
         device: str = "cpu",
-        load_in_4bit: bool = False,
         optimizer: Optional[torch.optim.Optimizer] = None,
         scheduler: Optional[LRSchedulerBase] = None,
         args_schema: Tuple[BatchTensorDescriptor, ...] = None,
@@ -61,14 +58,8 @@ class ModuleBackend:
         super().__init__()
         self.name, self.module, self.optimizer, self.scheduler = name, module, optimizer, scheduler
 
-        self.expert_id = expert_id
-        self.layer_id = layer_id
         
-        self.load_in_4bit = load_in_4bit
         self.device = device
-
-        if not load_in_4bit:
-            self.module.to(device)
 
         self.args_schema = args_schema = tuple(args_schema or ())
         self.kwargs_schema = kwargs_schema = dict(kwargs_schema or {})
@@ -179,18 +170,15 @@ class ModuleBackend:
 
     def state_dict(self) -> Dict:
         """Return the current state of the module, optimizer, and scheduler"""
-        full_state = dict(module=self.module.state_dict())
+        full_state = dict()
+        module_dict = self.module.state_dict()
         if self.optimizer is not None:
             full_state["optimizer"] = self.optimizer.state_dict()
         if self.scheduler is not None:
             full_state["scheduler"] = self.scheduler.state_dict()
-        return full_state
+        return module_dict, full_state
 
     def load_state_dict(self, state_dict: Dict):
-        self.module.load_state_dict(state_dict["module"])
-
-        self.module.to(self.device)
-        
         if self.optimizer is not None:
             if "optimizer" in state_dict:
                 self.optimizer.load_state_dict(state_dict["optimizer"])

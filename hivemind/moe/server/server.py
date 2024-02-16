@@ -9,11 +9,13 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 import torch
+from torch import nn
 
 from hivemind.dht import DHT
 from hivemind.moe.expert_uid import UID_DELIMITER
 
-from hivemind.moe.server.checkpoints import CheckpointSaver, is_directory, load_experts, load_weights_from_hf
+from hivemind.moe.server.checkpoints import CheckpointSaver, is_directory, load_expert, load_weights_from_hf
+from hivemind.moe.server.module_wrapper import ModuleWrapper
 
 from hivemind.moe.server.bnb_quantization import quantization, init_empty_weights
 
@@ -102,8 +104,6 @@ class Server(threading.Thread):
         hidden_dim=1024,
         optim_cls=None,
         scheduler: str = "none",
-        num_warmup_steps=None,
-        num_training_steps=None,
         clip_grad_norm=None,
         num_handlers=None,
         min_batch_size=1,
@@ -163,10 +163,9 @@ class Server(threading.Thread):
         #if checkpoint_dir is not None:
             #expert_uids = 
         #else:
-        expert_uids = []
+        expert_uids: List[ExpertUID] =_generate_uids(num_experts, num_layers, expert_pattern, dht)
         uids_to_generate = num_experts * num_layers
         logger.info(f"Generating {uids_to_generate} experts from pattern {expert_pattern}")
-        expert_uids.extend(_generate_uids(num_experts, num_layers, expert_pattern, dht))
 
         num_experts = len(expert_uids)
         num_handlers = num_handlers if num_handlers is not None else num_experts * 8
@@ -183,12 +182,9 @@ class Server(threading.Thread):
         # initialize experts
         experts = {}
         for expert_uid in expert_uids:
-
-            if load_in_4bit:
-                with init_empty_weights():
-                    expert = quantization(name_to_block[expert_cls](hidden_dim))
-            else:
-                expert = name_to_block[expert_cls](hidden_dim)
+            expert = cls._make_expert(load_in_4bit,expert_cls,hidden_dim)
+            cls._load_expert(expert,expert_uid.uid,checkpoint_dir,hugginface_rep)
+            expert = expert.to(device)
             optimizer = optim_cls(expert.parameters()) if optim_cls is not None else None
             scheduler = scheduler_cls(optimizer) if scheduler_cls is not None else None
             if clip_grad_norm is not None:
@@ -196,10 +192,7 @@ class Server(threading.Thread):
             experts[expert_uid.uid] = ModuleBackend(
                 name=expert_uid.uid,
                 module=expert,
-                expert_id=expert_uid.expert_id,
-                layer_id=expert_uid.layer_id,
                 device=device,
-                load_in_4bit=load_in_4bit,
                 args_schema=args_schema,
                 optimizer=optimizer,
                 scheduler=scheduler,
@@ -207,10 +200,7 @@ class Server(threading.Thread):
                 max_batch_size=max_batch_size,
             )
 
-        if checkpoint_dir and not hugginface_rep:
-            load_experts(experts, checkpoint_dir, load_in_4bit=load_in_4bit)
-        elif not checkpoint_dir and hugginface_rep:
-            load_weights_from_hf(experts, hugginface_rep)
+
 
 
         return cls(
@@ -224,16 +214,23 @@ class Server(threading.Thread):
             start=start,
         )
 
+    @classmethod
+    def _make_expert(cls,load_in_4bit,expert_cls,hidden_dim):
+        if load_in_4bit:
+            with init_empty_weights():
+                expert = quantization(name_to_block[expert_cls](hidden_dim))
+        else:
+            expert = name_to_block[expert_cls](hidden_dim)
+        return expert
 
-    # def load_from_checkpoint_dir(self,checkpoint_dir):
-    #         assert is_directory(checkpoint_dir)
-    #         expert_uids = [
-    #                 child.name for child in checkpoint_dir.iterdir() if (child / "checkpoint_last.safetensors").exists()
-    #             ]
-    #         total_experts_in_checkpoint = len(expert_uids)
-    #         if total_experts_in_checkpoint < num_experts*num_layers:
-    #             raise BaseException(f"checkpoint_dir {checkpoint_dir} is broken?")
 
+    @classmethod
+
+    def _load_expert(cls, expert: nn.Module, expert_name: str, checkpoint_dir: Path, hugginface_rep: str):
+        if checkpoint_dir and not hugginface_rep:
+            load_expert(expert, expert_name, checkpoint_dir)
+        elif not checkpoint_dir and hugginface_rep:
+            load_weights_from_hf(expert, hugginface_rep)
 
     def run(self):
         """
