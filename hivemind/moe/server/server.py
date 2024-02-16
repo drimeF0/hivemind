@@ -183,7 +183,7 @@ class Server(threading.Thread):
         experts = {}
         for expert_uid in expert_uids:
             expert = cls._make_expert(load_in_4bit,expert_cls,hidden_dim)
-            cls._load_expert(expert,expert_uid.uid,checkpoint_dir,hugginface_rep)
+            cls._load_expert(expert,expert_uid,checkpoint_dir,hugginface_rep)
             expert = expert.to(device)
             optimizer = optim_cls(expert.parameters()) if optim_cls is not None else None
             scheduler = scheduler_cls(optimizer) if scheduler_cls is not None else None
