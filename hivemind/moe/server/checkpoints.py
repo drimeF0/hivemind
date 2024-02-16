@@ -88,4 +88,4 @@ def load_expert(expert: nn,Module, expert_name: str, checkpoint_dir: Path):
 
 
 def load_expert_from_hf(expert: nn.Module, repo_id: str, expert_id: int, layer_id: int):
-    _load_weights_from_hf(expert,repo_id,expert_id,layer_id)
+    _load_weights_from_hf(expert,expert_id,layer_id,repo_id)
