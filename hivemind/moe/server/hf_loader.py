@@ -1,4 +1,5 @@
 from typing import Dict
+from torch import nn
 
 from safetensors.torch import load_file, save_file
 from huggingface_hub import snapshot_download,hf_hub_download
@@ -52,10 +53,10 @@ def get_state_dict_by_key(key : str, weigths_map : Dict, repo_id : str):
 def get_expert_state_dict(state_dict : Dict, key : str):
     return state_dict[key]
 
-def _load_weights_from_hf(expert : ModuleBackend, repo_id: str):
+def _load_weights_from_hf(expert : nn.Module, expert_id: int, layer_id: int, repo_id: str):
     repo_path = load_huggingface_rep(repo_id=repo_id)
     weights_map = load_weights_map_from_json(repo_path / "model.safetensors.index.json")
-    rule = mixtral_rules(expert.layer_id, expert.expert_id)
+    rule = mixtral_rules(layer_id, expert_id)
     module_state_dict = {}
 
     for key,expert_key in rule.items():
@@ -63,4 +64,4 @@ def _load_weights_from_hf(expert : ModuleBackend, repo_id: str):
         value = get_expert_state_dict(state_dict,key)
         module_state_dict[expert_key] = value
     
-    return {"module":module_state_dict}
+    expert.load_state_dict(module_state_dict)

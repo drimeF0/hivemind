@@ -11,7 +11,7 @@ from torch import nn
 
 from hivemind.moe.server.module_backend import ModuleBackend
 from hivemind.utils.logging import get_logger
-from hivemind.moe.server.hf_loader import load_weights_from_hf, load_safetensor, save_safetensor
+from hivemind.moe.server.hf_loader import load_safetensor, save_safetensor, _load_weights_from_hf
 
 logger = get_logger(__name__)
 
@@ -87,6 +87,5 @@ def _load_expert(expert: nn,Module, expert_name: str, checkpoint_dir: Path):
 
 
 
-def load_expert_from_hf(expert: nn.Module, repo_id: str):
-    state_dict = load_weights_from_hf(expert,repo_id)
-    expert.load_state_dict(state_dict)
+def load_expert_from_hf(expert: nn.Module, repo_id: str, expert_id: int, layer_id: int):
+    _load_weights_from_hf(expert,repo_id,expert_id,layer_id)

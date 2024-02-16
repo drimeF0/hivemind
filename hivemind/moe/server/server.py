@@ -14,7 +14,7 @@ from torch import nn
 from hivemind.dht import DHT
 from hivemind.moe.expert_uid import UID_DELIMITER
 
-from hivemind.moe.server.checkpoints import CheckpointSaver, is_directory, load_expert, load_weights_from_hf
+from hivemind.moe.server.checkpoints import CheckpointSaver, is_directory, load_expert, load_expert_from_hf
 from hivemind.moe.server.module_wrapper import ModuleWrapper
 
 from hivemind.moe.server.bnb_quantization import quantization, init_empty_weights
@@ -225,12 +225,11 @@ class Server(threading.Thread):
 
 
     @classmethod
-
-    def _load_expert(cls, expert: nn.Module, expert_name: str, checkpoint_dir: Path, hugginface_rep: str):
+    def _load_expert(cls, expert: nn.Module, expert_uid: ExpertUID, checkpoint_dir: Path, hugginface_rep: str):
         if checkpoint_dir and not hugginface_rep:
-            load_expert(expert, expert_name, checkpoint_dir)
+            load_expert(expert, expert_uid.uid, checkpoint_dir)
         elif not checkpoint_dir and hugginface_rep:
-            load_weights_from_hf(expert, hugginface_rep)
+            load_expert_from_hf(expert, hugginface_rep, expert_uid.expert_id, expert_uid.layer_id)
 
     def run(self):
         """
