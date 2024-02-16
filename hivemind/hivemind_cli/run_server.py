@@ -66,13 +66,11 @@ def main():
                         help='all experts will use this device in torch notation; default: cuda if available else cpu')
 
     parser.add_argument('--optimizer', type=str, default='adam', required=False, help='adam, sgd, adafacor (WIP) or none')
-    parser.add_argument('--num_warmup_steps', type=int, required=False,
-                        help='The number of warmup steps for LR schedule')
+
     parser.add_argument('--update_period', type=float, required=False, default=30,
                         help='Server will report experts to DHT once in this many seconds')
     parser.add_argument('--expiration', type=float, required=False, default=None,
                         help='DHT entries will expire after this many seconds')
-    parser.add_argument('--num_training_steps', type=int, required=False, help='The total number of steps for LR schedule')
 
     parser.add_argument('--clip_grad_norm', type=float, required=False, help='Maximum gradient norm used for clipping')
 
