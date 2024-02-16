@@ -217,7 +217,7 @@ class Server(threading.Thread):
     @classmethod
     def _make_expert(cls,load_in_4bit,expert_cls,hidden_dim):
         if load_in_4bit:
-            expert = quantization(name_to_block[expert_cls](hidden_dim))
+            expert = quantization(name_to_block[expert_cls](hidden_dim).to(dtype=torch.float16))
         else:
             expert = name_to_block[expert_cls](hidden_dim)
         return expert
