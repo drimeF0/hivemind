@@ -96,6 +96,7 @@ class Server(threading.Thread):
         cls,
         num_experts: int = 1,
         num_layers: int = 1,
+        layers_index_start: int = 0,
         hugginface_rep: str = None,
         checkpoint_dir: Optional[Path] = None,
         load_in_4bit: bool = False,
@@ -163,7 +164,7 @@ class Server(threading.Thread):
         #if checkpoint_dir is not None:
             #expert_uids = 
         #else:
-        expert_uids: List[ExpertUID] =_generate_uids(num_experts, num_layers, expert_pattern, dht)
+        expert_uids: List[ExpertUID] =_generate_uids(num_experts, num_layers, layers_index_start, expert_pattern, dht)
         uids_to_generate = num_experts * num_layers
         logger.info(f"Generating {uids_to_generate} experts from pattern {expert_pattern}")
 
@@ -199,6 +200,7 @@ class Server(threading.Thread):
                 min_batch_size=min_batch_size,
                 max_batch_size=max_batch_size,
             )
+        torch.cuda.empty_cache()
 
 
 
@@ -358,7 +360,7 @@ class ExpertUID:
         self.layer_id = layer_id
 
 def _generate_uids(
-    num_experts: int, num_layers: int, expert_pattern: str, dht: Optional[DHT] = None, attempts_per_expert=10
+    num_experts: int, num_layers: int, layers_start: int, expert_pattern: str, dht: Optional[DHT] = None, attempts_per_expert=10
 ) -> List[ExpertUID]:
     """
     Sample experts from a given pattern, remove duplicates.
@@ -377,7 +379,7 @@ def _generate_uids(
 
     # 1. sample uids
     new_uids = []
-    for layer_id in range(num_layers):
+    for layer_id in range(layers_start, num_layers):
         for expert_id in range(num_experts):
             new_uid = _generate_uid(layer_id,expert_id)
             new_uids.append(ExpertUID(uid=new_uid,expert_id=expert_id,layer_id=layer_id))

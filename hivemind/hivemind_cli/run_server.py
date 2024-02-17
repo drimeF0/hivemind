@@ -21,6 +21,7 @@ def main():
 
     parser.add_argument('--num_experts', type=int, default=None, required=True, help="The number of experts to serve")
     parser.add_argument('--num_layers', type=int, default=None, required=True, help="The number of layers to serve")
+    parser.add_argument('--layers_index_start', type=int, default=None, required=True, help="The number of layers to serve")
     parser.add_argument('--expert_pattern', type=str, default=None, required=True,
                         help='pattern like "mixtral.\{layer_id\}.\{expert_id\}"')
     parser.add_argument('--expert_cls', type=str, default='ffn', required=False,
