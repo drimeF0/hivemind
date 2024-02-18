@@ -205,8 +205,8 @@ class _RemoteModuleCall(torch.autograd.Function):
     ) -> Tuple[torch.Tensor, ...]:
         # Note: *inputs are flattened input tensors that follow the expert's info['input_schema']
         # detach to avoid pickling the computation graph
-        inputs = tuple(tensor.cpu().detach() for tensor in inputs)
         device = inputs[0].device
+        inputs = tuple(tensor.cpu().detach() for tensor in inputs)
         ctx.device = device
         ctx.uid, ctx.stub, ctx.info = uid, stub, info
         ctx.save_for_backward(*inputs)
@@ -232,7 +232,6 @@ class _RemoteModuleCall(torch.autograd.Function):
             expert_backward(ctx.uid, inputs_and_grad_outputs, serialized_tensors, ctx.stub)
         )
         deserialized_grad_inputs = [grad.to(ctx.device) for grad in deserialized_grad_inputs]
-        for grad in deserialized_grad_inputs:
-            print(grad.device)
+        print(ctx.device)
 
         return (DUMMY, None, None, None, *deserialized_grad_inputs)
