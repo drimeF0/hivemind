@@ -184,9 +184,9 @@ class Server(threading.Thread):
         experts = {}
         for expert_uid in expert_uids:
             expert = cls._make_expert(load_in_4bit,expert_cls,hidden_dim)
-            cls._load_expert(expert,expert_uid,checkpoint_dir,hugginface_rep)
+            cls._load_expert_weights(expert,expert_uid,checkpoint_dir,hugginface_rep)
             expert = expert.to(device)
-            print(expert.device)
+            print(next(expert.parameters()).device)
             optimizer = optim_cls(expert.parameters()) if optim_cls is not None else None
             scheduler = scheduler_cls(optimizer) if scheduler_cls is not None else None
             if clip_grad_norm is not None:
@@ -227,7 +227,7 @@ class Server(threading.Thread):
 
 
     @classmethod
-    def _load_expert(cls, expert: nn.Module, expert_uid: ExpertUID, checkpoint_dir: Path, hugginface_rep: str):
+    def _load_expert_weights(cls, expert: nn.Module, expert_uid: ExpertUID, checkpoint_dir: Path, hugginface_rep: str):
         if checkpoint_dir and not hugginface_rep:
             load_expert(expert, expert_uid.uid, checkpoint_dir)
         elif not checkpoint_dir and hugginface_rep:
