@@ -232,5 +232,7 @@ class _RemoteModuleCall(torch.autograd.Function):
             expert_backward(ctx.uid, inputs_and_grad_outputs, serialized_tensors, ctx.stub)
         )
         deserialized_grad_inputs = [grad.to(ctx.device) for grad in deserialized_grad_inputs]
+        for grad in deserialized_grad_inputs:
+            print(grad.device)
 
-        return (DUMMY.to(ctx.device), None, None, None, *deserialized_grad_inputs)
+        return (DUMMY, None, None, None, *deserialized_grad_inputs)
