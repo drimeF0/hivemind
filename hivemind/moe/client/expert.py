@@ -21,7 +21,7 @@ from hivemind.utils.nested import nested_compare, nested_flatten, nested_pack
 from hivemind.utils.serializer import MSGPackSerializer
 from hivemind.utils.streaming import split_for_streaming
 
-DUMMY = torch.empty(0, requires_grad=True)  # dummy tensor that triggers autograd in RemoteExpert
+DUMMY = torch.Tensor([0.0001], requires_grad=True)  # dummy tensor that triggers autograd in RemoteExpert
 
 
 def get_server_stub(p2p: P2P, server_peer_id: PeerID) -> "ConnectionHandlerStub":
@@ -233,4 +233,4 @@ class _RemoteModuleCall(torch.autograd.Function):
         )
         deserialized_grad_inputs = [grad.to(ctx.device) for grad in deserialized_grad_inputs]
 
-        return (DUMMY, None, None, None, *deserialized_grad_inputs)
+        return (DUMMY.to(ctx.device), None, None, None, *deserialized_grad_inputs)
