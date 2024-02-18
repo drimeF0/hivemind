@@ -21,8 +21,8 @@ from hivemind.utils.nested import nested_compare, nested_flatten, nested_pack
 from hivemind.utils.serializer import MSGPackSerializer
 from hivemind.utils.streaming import split_for_streaming
 
-DUMMY = torch.FloatTensor([0.0001], requires_grad=True)  # dummy tensor that triggers autograd in RemoteExpert
-
+DUMMY = torch.FloatTensor([0.0001])  # dummy tensor that triggers autograd in RemoteExpert
+DUMMY.requires_grad = True
 
 def get_server_stub(p2p: P2P, server_peer_id: PeerID) -> "ConnectionHandlerStub":
     """Create an RPC stub that can send requests to any expert on the specified remote server"""
