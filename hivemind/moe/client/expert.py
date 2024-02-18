@@ -215,6 +215,7 @@ class _RemoteModuleCall(torch.autograd.Function):
             for tensor, proto in zip(inputs, nested_flatten(info["forward_schema"]))
         )
         deserialized_outputs = RemoteExpertWorker.run_coroutine(expert_forward(uid, inputs, serialized_tensors, stub))
+        deserialized_outputs = [x.to(device) for x in deserialized_outputs]
 
         return tuple(deserialized_outputs)
 

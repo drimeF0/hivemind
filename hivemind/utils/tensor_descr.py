@@ -130,6 +130,6 @@ class BatchTensorDescriptor(TensorDescriptor):
 def _safe_check_pinned(tensor: torch.Tensor) -> bool:
     """Check whether or not a tensor is pinned. If torch cannot initialize cuda, returns False instead of error."""
     try:
-        return tensor.is_pinned() #torch.cuda.is_available() and 
+        return torch.cuda.is_available() and tensor.is_pinned()
     except RuntimeError:
         return False

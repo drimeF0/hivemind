@@ -177,7 +177,7 @@ class Server(threading.Thread):
             args_schema = tuple(BatchTensorDescriptor.from_tensor(arg, compression) for arg in sample_input)
         else:
             args_schema = (BatchTensorDescriptor.from_tensor(sample_input, compression),)
-
+        print
         scheduler_cls = None
 
         # initialize experts
@@ -186,6 +186,7 @@ class Server(threading.Thread):
             expert = cls._make_expert(load_in_4bit,expert_cls,hidden_dim)
             cls._load_expert(expert,expert_uid,checkpoint_dir,hugginface_rep)
             expert = expert.to(device)
+            print(expert.device)
             optimizer = optim_cls(expert.parameters()) if optim_cls is not None else None
             scheduler = scheduler_cls(optimizer) if scheduler_cls is not None else None
             if clip_grad_norm is not None:
@@ -389,5 +390,5 @@ def _generate_uids(
         found = get_experts(dht, [ui.uid for ui in new_uids])
         for f in found:
             if f is not None:
-                raise f"{found} already exists"
+                raise NameError(f"{found} already exists")
     return new_uids
