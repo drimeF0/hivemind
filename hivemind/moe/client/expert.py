@@ -61,18 +61,18 @@ class RemoteExpert(nn.Module):
         """Call RemoteExpert for the specified inputs and return its output(s). Compatible with pytorch.autograd."""
         assert len(kwargs) == len(self.info["keyword_names"]), f"Keyword args should be {self.info['keyword_names']}"
         kwargs = {key: kwargs[key] for key in self.info["keyword_names"]}
-
+        device = args[0].device # i thinks index 0 in args is tensor
         # Note: we put keyword arguments in the same order as on a server to prevent f(a=1, b=2) != f(b=2, a=1) errors
 
         forward_inputs = (args, kwargs)
 
         if not nested_compare(forward_inputs, self.info["forward_schema"]):
             raise TypeError(f"Inputs do not match expert input schema. Did you pass the right number of parameters?")
-
+        
+        # Note: we send DUMMY to prevent torch from excluding expert from backward if no other inputs require grad
         flat_outputs = _RemoteModuleCall.apply(DUMMY, self.uid, self.stub, self.info, *nested_flatten(forward_inputs))
 
-        # Note: we send DUMMY to prevent torch from excluding expert from backward if no other inputs require grad
-        return nested_pack(flat_outputs, structure=self.info["outputs_schema"])
+        return nested_pack(flat_outputs, structure=self.info["outputs_schema"]).to(device)
 
     @property
     def info(self):
@@ -215,7 +215,6 @@ class _RemoteModuleCall(torch.autograd.Function):
             for tensor, proto in zip(inputs, nested_flatten(info["forward_schema"]))
         )
         deserialized_outputs = RemoteExpertWorker.run_coroutine(expert_forward(uid, inputs, serialized_tensors, stub))
-        deserialized_outputs = [x.to(device) for x in deserialized_outputs]
 
         return tuple(deserialized_outputs)
 

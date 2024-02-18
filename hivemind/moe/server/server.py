@@ -108,7 +108,7 @@ class Server(threading.Thread):
         clip_grad_norm=None,
         num_handlers=None,
         min_batch_size=1,
-        max_batch_size=8,
+        max_batch_size=2048,
         device=None,
         initial_peers=(),
         compression=CompressionType.BLOCKWISE_8BIT,
@@ -186,7 +186,6 @@ class Server(threading.Thread):
             expert = cls._make_expert(load_in_4bit,expert_cls,hidden_dim)
             cls._load_expert_weights(expert,expert_uid,checkpoint_dir,hugginface_rep)
             expert = expert.to(device)
-            print(next(expert.parameters()).device)
             optimizer = optim_cls(expert.parameters()) if optim_cls is not None else None
             scheduler = scheduler_cls(optimizer) if scheduler_cls is not None else None
             if clip_grad_norm is not None:

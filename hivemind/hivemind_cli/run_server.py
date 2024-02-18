@@ -21,12 +21,12 @@ def main():
 
     parser.add_argument('--num_experts', type=int, default=None, required=True, help="The number of experts to serve")
     parser.add_argument('--num_layers', type=int, default=None, required=True, help="The number of layers to serve")
-    parser.add_argument('--layers_index_start', type=int, default=None, required=True, help="The number of layers to serve")
+    parser.add_argument('--layers_index_start', type=int, default=0, required=False, help="start from this layers index. for example if --num_layers is 10 and --layers_index_start is 5 server wil serve [5,6,7,8,9,10] layers.")
     parser.add_argument('--expert_pattern', type=str, default=None, required=True,
                         help='pattern like "mixtral.\{layer_id\}.\{expert_id\}"')
     parser.add_argument('--expert_cls', type=str, default='ffn', required=False,
                         help="expert type from test_utils.layers, e.g. 'ffn', 'transformer', 'det_dropout' or 'nop'")
-    parser.add_argument('--hidden_dim', type=int, default=1024, required=False, help='main dimension for expert_cls')
+    parser.add_argument('--hidden_dim', type=int, required=True, required=False, help='main dimension for expert_cls')
 
     parser.add_argument('--host_maddrs', type=list, nargs='+', default=['/ip4/0.0.0.0/tcp/0'], required=False,
                         help='Multiaddrs to listen for external connections from other p2p instances; default: all IPv4 and TCP: /ip4/0.0.0.0/tcp/0')
@@ -47,7 +47,7 @@ def main():
     parser.add_argument(
         "--load_in_4bit",
         action="store_true",
-        help="bnb 4bit",
+        help="enable 4bit quantization (dont works with optimizer)",
     )
 
     parser.add_argument(
@@ -55,14 +55,15 @@ def main():
         type=str,
         default=None,
         required=False,
+        help="repo id for weights downloading. only works with rules (WIP)"
     )
 
     parser.add_argument('--num_handlers', type=int, default=None, required=False,
                         help='server will use this many processes to handle incoming requests')
     parser.add_argument('--min_batch_size', type=int, default=1,
                         help='Minimum required batch size for all expert operations')
-    parser.add_argument('--max_batch_size', type=int, default=1,
-                        help='The total number of examples in the same batch will not exceed this value')
+    parser.add_argument('--max_batch_size', type=int, default=2048,
+                        help='The total number of examples in the same batch will not exceed this value. for transformers modules works as max context for tokens (???)')
     parser.add_argument('--device', type=str, default=None, required=False,
                         help='all experts will use this device in torch notation; default: cuda if available else cpu')
 
