@@ -1,5 +1,5 @@
 from typing import Dict
-from torch import nn
+from torch import nn, Tensor
 
 from safetensors.torch import load_file, save_file
 from huggingface_hub import snapshot_download,hf_hub_download
@@ -21,18 +21,18 @@ from hivemind.moe.server.module_backend import ModuleBackend
 
 #rule for mixtral
 
-def mixtral_rules(layer_id : int,expert_id : int):
+def mixtral_rules(layer_id : int,expert_id : int) -> Dict[str,str]:
     return {
         f"model.layers.{layer_id}.block_sparse_moe.experts.{expert_id}.w1.weight":"block.w1.weight",
-    f"model.layers.{layer_id}.block_sparse_moe.experts.{expert_id}.w2.weight":"block.w2.weight",
-f"model.layers.{layer_id}.block_sparse_moe.experts.{expert_id}.w3.weight":"block.w3.weight"
-}
+        f"model.layers.{layer_id}.block_sparse_moe.experts.{expert_id}.w2.weight":"block.w2.weight",
+        f"model.layers.{layer_id}.block_sparse_moe.experts.{expert_id}.w3.weight":"block.w3.weight"
+    }
 
 
 def load_huggingface_rep(repo_id : str) -> Path:
     return Path(snapshot_download(repo_id=repo_id,allow_patterns=["*.json"]))
 
-def load_safetensor(path : str):
+def load_safetensor(path : str) -> Dict[str, Tensor]:
     return load_file(path)
 
 def save_safetensor(tensors: Dict, path: str):

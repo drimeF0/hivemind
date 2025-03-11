@@ -16,13 +16,13 @@ from hivemind.moe.server.hf_loader import load_safetensor, save_safetensor, _loa
 logger = get_logger(__name__)
 
 
-def is_directory(directory: Path):
+def is_directory(directory: Path) -> bool:
     assert directory is not None
     assert directory.exists()
     assert directory.is_dir()
     return True
 
-def is_file(directory: Path):
+def is_file(directory: Path) -> bool:
     assert directory is not None
     assert directory.exists()
     assert directory.is_file()
