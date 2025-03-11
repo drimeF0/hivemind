@@ -1,7 +1,7 @@
 import re
 from typing import Any, Dict, Optional, Type
 
-import pydantic
+import pydantic.v1 as pydantic
 
 from hivemind.dht.crypto import RSASignatureValidator
 from hivemind.dht.protocol import DHTProtocol
@@ -91,7 +91,6 @@ class SchemaValidator(RecordValidatorBase):
             return False
         [field_name] = list(record.keys())
 
-        n_outside_schema = 0
         validation_errors = []
         for schema in self._schemas:
             try:

@@ -103,7 +103,7 @@ def download_p2p_daemon():
 
     if sha256(binary_path) != expected_hash:
         binary_url = os.path.join(P2PD_BINARY_URL, binary_name)
-        print(f"Downloading {binary_url}")
+        print(f"Downloading {binary_url} to {binary_path}")
 
         urllib.request.urlretrieve(binary_url, binary_path)
         os.chmod(binary_path, 0o777)
@@ -183,9 +183,10 @@ setup(
         "Intended Audience :: Science/Research",
         "License :: OSI Approved :: MIT License",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.10",
+        "Programming Language :: Python :: 3.11",
         "Topic :: Scientific/Engineering",
         "Topic :: Scientific/Engineering :: Mathematics",
         "Topic :: Scientific/Engineering :: Artificial Intelligence",

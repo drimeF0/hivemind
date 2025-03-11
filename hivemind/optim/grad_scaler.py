@@ -4,8 +4,17 @@ from copy import deepcopy
 from typing import Dict, Optional
 
 import torch
-from torch.cuda.amp import GradScaler as TorchGradScaler
-from torch.cuda.amp.grad_scaler import OptState, _refresh_per_optimizer_state
+from packaging import version
+
+torch_version = torch.__version__.split("+")[0]
+
+if version.parse(torch_version) >= version.parse("2.3.0"):
+    from torch.amp import GradScaler as TorchGradScaler
+    from torch.amp.grad_scaler import OptState, _refresh_per_optimizer_state
+else:
+    from torch.cuda.amp import GradScaler as TorchGradScaler
+    from torch.cuda.amp.grad_scaler import OptState, _refresh_per_optimizer_state
+
 from torch.optim import Optimizer as TorchOptimizer
 
 import hivemind
@@ -117,9 +126,3 @@ class GradScaler(TorchGradScaler):
     def are_grads_finite(self, optimizer: TorchOptimizer, use_cached: bool = False) -> bool:
         opt_dict = self._found_inf_per_device(optimizer) if use_cached else self._check_inf_per_device(optimizer)
         return not sum(v.item() for v in opt_dict.values())
-
-
-class HivemindGradScaler(GradScaler):
-    def __init__(self, *args, **kwargs):
-        logger.warning("HivemindGradScaler was renamed to hivemind.GradScaler, this reference will be removed in v1.1")
-        super().__init__(*args, **kwargs)

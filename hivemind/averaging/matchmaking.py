@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import asyncio
-import concurrent.futures
 import contextlib
 import random
 from math import isfinite
@@ -22,7 +21,7 @@ logger = get_logger(__name__)
 
 
 class Matchmaking:
-    f"""
+    """
     An internal class that is used to form groups of averages for running allreduce
     See DecentralizedAverager docstring for the detailed description of all parameters
 
@@ -168,8 +167,8 @@ class Matchmaking:
                         elif len(self.current_followers) > 0:
                             await self.leader_disband_group()
                         continue
-                except (concurrent.futures.CancelledError, asyncio.CancelledError):
-                    break  # note: this is a compatibility layer for python3.7
+                except asyncio.CancelledError:
+                    break
                 except Exception as e:
                     if not self.assembled_group.done():
                         self.assembled_group.set_exception(e)
@@ -321,8 +320,8 @@ class Matchmaking:
                 ordered_peer_ids=[item.to_bytes() for item in group_info.peer_ids],
                 gathered=group_info.gathered,
             )
-        except (concurrent.futures.CancelledError, asyncio.CancelledError):
-            return  # note: this is a compatibility layer for python3.7
+        except asyncio.CancelledError:
+            return
         except Exception as e:
             logger.exception(e)
             yield averaging_pb2.MessageFromLeader(code=averaging_pb2.INTERNAL_ERROR)
@@ -384,7 +383,7 @@ class Matchmaking:
 
         logger.debug(f"{self.peer_id} - assembled group of {len(ordered_peer_ids)} peers")
         group_info = GroupInfo(group_id, tuple(ordered_peer_ids), gathered)
-        await self.group_key_manager.update_key_on_group_assembled(group_info, is_leader=True)
+        await self.group_key_manager.update_key_on_group_assembled(group_info)
         self.assembled_group.set_result(group_info)
         return group_info
 
