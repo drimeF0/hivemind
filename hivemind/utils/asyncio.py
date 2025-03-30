@@ -5,7 +5,6 @@ from concurrent.futures import ThreadPoolExecutor
 from contextlib import AbstractAsyncContextManager, AbstractContextManager, asynccontextmanager
 from typing import AsyncIterable, AsyncIterator, Awaitable, Callable, Iterable, Optional, Tuple, TypeVar, Union
 
-import uvloop
 
 from hivemind.utils.logging import get_logger
 
@@ -19,10 +18,16 @@ def switch_to_uvloop() -> asyncio.AbstractEventLoop:
         asyncio.get_event_loop().stop()  # if we're in jupyter, get rid of its built-in event loop
     except RuntimeError as error_no_event_loop:
         pass  # this allows running DHT from background threads with no event loop
-    uvloop.install()
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    return loop
+    if os.name == "nt":
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        return loop
+    else:
+        import uvloop
+        uvloop.install()
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        return loop
 
 
 async def anext(aiter: AsyncIterator[T]) -> Union[T, StopAsyncIteration]:
