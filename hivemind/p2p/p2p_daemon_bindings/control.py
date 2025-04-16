@@ -227,7 +227,7 @@ class ControlClient:
 
         except Exception as e:
             logger.error(traceback.format_exc())
-            response = p2pd_pb.CallUnaryResponse(error=repr(e).encode())
+            response = p2pd_pb.CallUnaryResponse(error=traceback.format_exc().encode())
             
 
         payload = p2pd_pb.PersistentConnectionRequest(callId=call_id.bytes, unaryResponse=response)
