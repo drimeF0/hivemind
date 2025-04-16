@@ -8,6 +8,7 @@ import asyncio
 from contextlib import asynccontextmanager, closing
 from typing import AsyncIterator, Awaitable, Callable, Dict, Iterable, Optional, Sequence, Tuple
 from uuid import UUID, uuid4
+import traceback
 
 from hivemind.p2p.p2p_daemon_bindings.datastructures import PeerID, PeerInfo, StreamInfo
 from hivemind.p2p.p2p_daemon_bindings.utils import (
@@ -225,7 +226,9 @@ class ControlClient:
             response = p2pd_pb.CallUnaryResponse(response=response_payload)
 
         except Exception as e:
+            logger.error(traceback.format_exc())
             response = p2pd_pb.CallUnaryResponse(error=repr(e).encode())
+            
 
         payload = p2pd_pb.PersistentConnectionRequest(callId=call_id.bytes, unaryResponse=response)
         if payload.ByteSize() <= self.persistent_conn_max_msg_size:
